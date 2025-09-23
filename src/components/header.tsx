@@ -8,8 +8,6 @@ export function Header() {
 
   const links = [
     { to: "/", label: "Teste" },
-
-
   ];
 
   return (
