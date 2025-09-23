@@ -1,13 +1,7 @@
-// @ts-ignore
-type Uint8Array = globalThis.Uint8Array;
-// @ts-ignore
-type ArrayBuffer = globalThis.ArrayBuffer;
-
 import React, { useEffect, useRef, useState } from "react";
 import { Footer } from "../components/footer";
 import { Header } from "../components/header";
 import "../index.css";
-import * as faceapi from "face-api.js";
 
 type MicDevice = {
   deviceId: string;
@@ -38,11 +32,8 @@ type Results = {
     deviceLabel?: string;
     status?: TestStatus;
   };
-  faces?: number;
   timestamp: string;
 };
-
-type DOMUint8Array = globalThis.Uint8Array;
 
 export function Teste() {
   const [step, setStep] = useState<"connectivity" | "camera" | "mic" | "done">("connectivity");
@@ -116,13 +107,10 @@ export function Teste() {
       }
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } } });
       currentStreamRef.current = stream;
-        if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            videoRef.current.onloadeddata = () => {
-                initFaceDetection();
-            };    
-            await videoRef.current.play().catch(() => { });
-        }
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(() => {});
+      }
       const track = stream.getVideoTracks()[0];
       const settings = track.getSettings();
       setResults(prev => ({
@@ -164,7 +152,6 @@ export function Teste() {
   }
 
   function stopCamera() {
-    stopDetection();
     const s = currentStreamRef.current;
     if (s) {
       s.getTracks().forEach(t => t.stop());
@@ -174,31 +161,6 @@ export function Teste() {
       try { videoRef.current.pause(); videoRef.current.srcObject = null; } catch {}
     }
   }
-
-  const detectionIntervalRef = useRef<number | null>(null);
-
-    async function initFaceDetection() {
-        await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
-        detectionIntervalRef.current = setInterval(async () => {
-            if (videoRef.current) {
-                const faces = await faceapi.detectAllFaces(
-                    videoRef.current,
-                    new faceapi.TinyFaceDetectorOptions({ inputSize: 224 })
-                );
-                setResults(prev => ({
-                    ...prev,
-                    faces: faces.length
-                }));
-            }
-        }, 200);
-    }
-
-    function stopDetection() {
-        if (detectionIntervalRef.current) {
-            clearInterval(detectionIntervalRef.current);
-            detectionIntervalRef.current = null;
-        }
-    }
 
   // --- MICROPHONE FUNCTIONS ---
 
@@ -313,11 +275,8 @@ export function Teste() {
 function drawLevel() {
   const analyser = analyserRef.current;
   const data = dataRef.current;
-  if (!analyser || !data || !(data instanceof Uint8Array)) {
-    rafRef.current = requestAnimationFrame(drawLevel);
-    return;
-  }
-  analyser.getByteTimeDomainData(data as unknown as globalThis.Uint8Array);
+  if (!analyser || !data) { rafRef.current = requestAnimationFrame(drawLevel); return; }
+  analyser.getByteTimeDomainData(data);
   let sum = 0;
   for (let i = 0; i < data.length; i++) {
     const v = (data[i] - 128) / 128;
@@ -527,9 +486,6 @@ function drawLevel() {
                       {results.camera?.resolution?.height ?? "—"}
                     </p>
                     <p>Dispositivo: {results.camera?.deviceLabel ?? "—"}</p>
-                    <p>
-                        Rostos detectados: {results.faces ?? "—"}
-                    </p>
                   </div>
                 </div>
               </div>
