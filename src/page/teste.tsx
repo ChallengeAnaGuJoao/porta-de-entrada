@@ -1,3 +1,8 @@
+// @ts-ignore
+type Uint8Array = globalThis.Uint8Array;
+// @ts-ignore
+type ArrayBuffer = globalThis.ArrayBuffer;
+
 import React, { useEffect, useRef, useState } from "react";
 import { Footer } from "../components/footer";
 import { Header } from "../components/header";
@@ -36,6 +41,8 @@ type Results = {
   faces?: number;
   timestamp: string;
 };
+
+type DOMUint8Array = globalThis.Uint8Array;
 
 export function Teste() {
   const [step, setStep] = useState<"connectivity" | "camera" | "mic" | "done">("connectivity");
@@ -144,7 +151,16 @@ export function Teste() {
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const dataUrl = canvas.toDataURL("image/png");
-    setResults(prev => ({ ...prev, camera: { ...(prev.camera || {}), snapshotDataUrl: dataUrl } }));
+    setResults(prev => {
+        if (!prev.camera) return prev;
+        return {
+            ...prev,
+            camera: {
+                ...(prev.camera ?? {}),
+                snapshotDataUrl: dataUrl 
+            } 
+        };
+    });
   }
 
   function stopCamera() {
@@ -159,7 +175,7 @@ export function Teste() {
     }
   }
 
-  const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const detectionIntervalRef = useRef<number | null>(null);
 
     async function initFaceDetection() {
         await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
@@ -297,8 +313,11 @@ export function Teste() {
 function drawLevel() {
   const analyser = analyserRef.current;
   const data = dataRef.current;
-  if (!analyser || !data) { rafRef.current = requestAnimationFrame(drawLevel); return; }
-  analyser.getByteTimeDomainData(data);
+  if (!analyser || !data || !(data instanceof Uint8Array)) {
+    rafRef.current = requestAnimationFrame(drawLevel);
+    return;
+  }
+  analyser.getByteTimeDomainData(data as unknown as globalThis.Uint8Array);
   let sum = 0;
   for (let i = 0; i < data.length; i++) {
     const v = (data[i] - 128) / 128;
