@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Footer } from "../components/footer";
 import { Header } from "../components/header";
 import "../index.css";
+import * as faceapi from "face-api.js";
 
 type MicDevice = {
   deviceId: string;
@@ -32,6 +33,7 @@ type Results = {
     deviceLabel?: string;
     status?: TestStatus;
   };
+  faces?: number;
   timestamp: string;
 };
 
@@ -159,6 +161,30 @@ export function Teste() {
     }
     if (videoRef.current) {
       try { videoRef.current.pause(); videoRef.current.srcObject = null; } catch {}
+    }
+  }
+  const detectionIntervalRef = useRef<number | null>(null);
+
+  async function initFaceDetection() {
+    await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
+    detectionIntervalRef.current = setInterval(async () => {
+      if (videoRef.current) {
+        const faces = await faceapi.detectAllFaces(
+          videoRef.current,
+          new faceapi.TinyFaceDetectorOptions({ inputSize: 224 })
+        );
+        setResults(prev => ({
+          ...prev,
+          faces: faces.length
+        }));
+      }
+    }, 200);
+  }
+
+  function stopDetection() {
+    if (detectionIntervalRef.current) {
+      clearInterval(detectionIntervalRef.current);
+      detectionIntervalRef.current = null;
     }
   }
 
@@ -486,6 +512,9 @@ function drawLevel() {
                       {results.camera?.resolution?.height ?? "—"}
                     </p>
                     <p>Dispositivo: {results.camera?.deviceLabel ?? "—"}</p>
+                    <p>
+                      Rostos detectados: {results.faces ?? "—"}
+                    </p>
                   </div>
                 </div>
               </div>
