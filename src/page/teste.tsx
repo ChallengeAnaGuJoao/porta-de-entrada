@@ -111,6 +111,9 @@ export function Teste() {
       currentStreamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.onloadeddata = () => {
+        initFaceDetection();
+      };
         await videoRef.current.play().catch(() => {});
       }
       const track = stream.getVideoTracks()[0];
