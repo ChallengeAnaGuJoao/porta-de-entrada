@@ -63,41 +63,58 @@ export function Teste() {
   const recordedChunksRef = useRef<Blob[]>([]);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
-  // --- CONNECTIVITY TEST ---
-  async function runConnectivityTest() {
-    setBusy(true);
-    const start = performance.now();
-    const pingUrl = "/chat-bot-animate.svg"; // small static resource
-    try {
-      await fetch(pingUrl, { cache: "no-store" });
-      const pingMs = Math.round(performance.now() - start);
+// --- CONNECTIVITY TEST ---
+async function runConnectivityTest() {
+  setBusy(true);
+  try {
+    const url = "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"; // ~1MB
 
-      const dlUrl = "/chat-bot-animate.svg";
-      const dlStart = performance.now();
-      const dlResp = await fetch(dlUrl, { cache: "no-store" });
-      const dlBuffer = await dlResp.arrayBuffer();
-      const dlMs = (performance.now() - dlStart) / 1000;
-      const bytes = dlBuffer.byteLength;
-      const kbps = Math.round((bytes * 8) / dlMs / 1000);
-
-      const status: TestStatus = pingMs < 300 && kbps > 100 ? "success" : "failure";
-
-      setResults(prev => ({
-        ...prev,
-        connectivity: {
-          pingMs,
-          downloadKbps: kbps,
-          downloadBytes: bytes,
-          details: `download time ${dlMs.toFixed(2)}s`,
-          status,
-        },
-      }));
-    } catch (err: any) {
-      setResults(prev => ({ ...prev, connectivity: { details: `error: ${err?.message || err}`, status: "failure" } }));
-    } finally {
-      setBusy(false);
+    // Ping test (5 samples)
+    const samples: number[] = [];
+    for (let i = 0; i < 5; i++) {
+      const t0 = performance.now();
+      await fetch(url, { method: "HEAD", cache: "no-store" });
+      samples.push(performance.now() - t0);
     }
+    const mean = Math.round(samples.reduce((a, b) => a + b, 0) / samples.length);
+    const jitter = Math.round(
+      samples.slice(1).reduce((acc, v, i) => acc + Math.abs(v - samples[i]), 0) /
+        (samples.length - 1)
+    );
+
+    // Download test (~1MB)
+    const dlStart = performance.now();
+    const dlResp = await fetch(url, { cache: "no-store" });
+    const dlBuffer = await dlResp.arrayBuffer();
+    const dlMs = (performance.now() - dlStart) / 1000;
+    const bytes = dlBuffer.byteLength;
+    const kbps = Math.round((bytes * 8) / dlMs / 1000);
+
+    const status: TestStatus = mean < 600 && kbps > 400 ? "success" : "failure";
+
+    setResults((prev) => ({
+      ...prev,
+      connectivity: {
+        pingMs: mean,
+        downloadKbps: kbps,
+        downloadBytes: bytes,
+        details: `jitter ${jitter} ms, ${samples.length} amostras, download em ${dlMs.toFixed(2)}s`,
+        status,
+      },
+    }));
+  } catch (err: any) {
+    setResults((prev) => ({
+      ...prev,
+      connectivity: {
+        details: `erro: ${err?.message || err}`,
+        status: "failure",
+      },
+    }));
+  } finally {
+    setBusy(false);
   }
+}
+
 
   // --- CAMERA TEST ---
   async function startCamera() {
@@ -409,21 +426,22 @@ function drawLevel() {
                   Resetar
                 </button>
               </div>
-              {results.connectivity && (
-                <div className="mt-4 bg-bg-escurinho p-3 rounded flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                  {renderStatus(results.connectivity.status)}
-                  <div>
-                    <p>Ping: {results.connectivity.pingMs ?? "—"} ms</p>
-                    <p>
-                      Download: {results.connectivity.downloadKbps ?? "—"} kbps (
-                      {results.connectivity.downloadBytes ?? "—"} bytes)
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {results.connectivity.details}
-                    </p>
-                  </div>
-                </div>
-              )}
+            {results.connectivity && (
+  <div className="mt-4 bg-bg-escurinho p-3 rounded flex flex-col sm:flex-row items-start sm:items-center gap-2">
+    {renderStatus(results.connectivity.status)}
+    <div>
+      <p>Ping médio: {results.connectivity.pingMs ?? "—"} ms</p>
+      <p>
+        Download: {results.connectivity.downloadKbps ?? "—"} kbps (
+        {results.connectivity.downloadBytes ?? "—"} bytes)
+      </p>
+      <p className="text-sm text-gray-600">
+        {results.connectivity.details}
+      </p>
+    </div>
+  </div>
+)}
+
               <div className="mt-4 flex justify-end">
                 <button
                   onClick={() => setStep("camera")}
