@@ -68,7 +68,7 @@ export function Teste() {
 async function runConnectivityTest() {
   setBusy(true);
   try {
-    const url = "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"; // ~1MB
+    const url = "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
 
     // Ping test (5 samples)
     const samples: number[] = [];
