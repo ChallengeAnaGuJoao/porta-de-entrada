@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Footer } from "../components/footer";
 import { Header } from "../components/header";
+import { WatsonChat } from "../components/WatsonChat";
 import "../index.css";
 import * as faceapi from "face-api.js";
 
@@ -231,6 +232,7 @@ async function runConnectivityTest() {
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     streamRef.current = stream;
 
+    // --- Preparar análise de áudio ---
     const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
     const audioCtx: AudioContext = new AC();
     audioCtxRef.current = audioCtx;
@@ -243,46 +245,52 @@ async function runConnectivityTest() {
     dataRef.current = new Uint8Array(analyser.frequencyBinCount);
 
     recordedChunksRef.current = [];
-    maxLevelRef.current = 0; // <--- reset do máximo no início
+    maxLevelRef.current = 0;
+
+    // --- Gravador ---
     const recorder = new MediaRecorder(stream);
     mediaRecorderRef.current = recorder;
-    recorder.ondataavailable = ev => { if (ev.data.size > 0) recordedChunksRef.current.push(ev.data); };
+    recorder.ondataavailable = (ev) => {
+      if (ev.data.size > 0) recordedChunksRef.current.push(ev.data);
+    };
     recorder.start();
 
     setListening(true);
     rafRef.current = requestAnimationFrame(drawLevel);
 
-    // Para teste curto de 3 segundos
+    // --- Parar após 5 segundos ---
     setTimeout(() => {
       if (recorder.state === "recording") recorder.stop();
-    }, 3000);
+    }, 5000);
 
     recorder.onstop = () => {
-      const blob = new Blob(recordedChunksRef.current);
+      const blob = new Blob(recordedChunksRef.current, { type: "audio/webm" });
+      const audioUrl = URL.createObjectURL(blob);
 
-      // usa o RMS máximo detectado
       const status: TestStatus = maxLevelRef.current >= 0.01 ? "success" : "failure";
 
-      setResults(prev => ({
+      setResults((prev) => ({
         ...prev,
         mic: {
           ...(prev.mic || {}),
           rms: maxLevelRef.current,
           recordedBlobSize: blob.size,
+          audioUrl,            // <- adiciona URL para reprodução
           supported: true,
-          deviceLabel: micDevices.find(d => d.deviceId === selectedMic)?.label,
+          deviceLabel: micDevices.find((d) => d.deviceId === selectedMic)?.label,
           status,
-        }
+        },
       }));
 
-      stream.getTracks().forEach(t => t.stop());
+      // Para não deixar o microfone aberto
+      stream.getTracks().forEach((t) => t.stop());
     };
-
   } catch (err: any) {
     setMicError("Erro ao iniciar captura: " + (err?.message ?? err));
     setListening(false);
   }
 }
+
 
   function stopListening() {
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
@@ -614,33 +622,6 @@ function drawLevel() {
                   Microfone disponível: {results.mic?.supported ? "Sim" : "—"}{" "}
                   {renderStatus(results.mic?.status)}
                 </p>
-                <p>Nível RMS (aprox): {level.toFixed(3)}</p>
-                <p>
-                  Última gravação (bytes):{" "}
-                  {results.mic?.recordedBlobSize ?? "—"}
-                </p>
-                <p>Dispositivo: {results.mic?.deviceLabel ?? "—"}</p>
-
-                <div className="mt-4">
-                  <div className="w-full h-4 bg-gray-200 rounded overflow-hidden">
-                    <div
-                      style={{
-                        width: `${pct}%`,
-                        height: "100%",
-                        transition: "width 120ms linear",
-                        background:
-                          pct > 66
-                            ? "#16a34a"
-                            : pct > 33
-                            ? "#f59e0b"
-                            : "#ef4444",
-                      }}
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Nível de áudio detectado
-                  </p>
-                </div>
               </div>
 
               <div className="mt-4 flex flex-wrap justify-between gap-2">
@@ -657,6 +638,13 @@ function drawLevel() {
                   Ver resultados
                 </button>
               </div>
+              {results.mic?.audioUrl && (
+  <div className="mt-3">
+    <p className="text-sm font-medium">Reprodução da gravação:</p>
+    <audio controls src={results.mic.audioUrl} className="w-full mt-1" />
+  </div>
+)}
+
             </div>
           )}
 
@@ -745,6 +733,7 @@ function drawLevel() {
       </div>
     </div>
     <Footer />
+    <WatsonChat/>
   </>
 );
 
