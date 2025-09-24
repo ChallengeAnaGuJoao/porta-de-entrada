@@ -134,28 +134,6 @@ export function Teste() {
     }
   }
 
-  function takeSnapshot() {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas) return;
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 360;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL("image/png");
-    setResults(prev => {
-        if (!prev.camera) return prev;
-        return {
-            ...prev,
-            camera: {
-                ...(prev.camera ?? {}),
-                snapshotDataUrl: dataUrl 
-            } 
-        };
-    });
-  }
-
   function stopCamera() {
     const s = currentStreamRef.current;
     if (s) {
@@ -457,87 +435,92 @@ function drawLevel() {
             </div>
           )}
 
-          {/* --- CAMERA --- */}
-          {step === "camera" && (
-            <div>
-              <h2 className="font-semibold mb-2">Teste de câmera</h2>
-              <p className="text-sm mb-4">
-                Permita acesso à câmera para ver o preview. Tire um snapshot para
-                o relatório.
-              </p>
+{/* --- CAMERA --- */}
+{step === "camera" && (
+  <div>
+    <h2 className="font-semibold mb-2">Teste de câmera</h2>
+    <p className="text-sm mb-4">
+      Permita acesso à câmera para ver o preview.
+    </p>
 
-              <div className="flex flex-col md:flex-row md:gap-4">
-                <div className="md:w-1/2">
-                  <div className="bg-black rounded mb-2 relative">
-                    <video
-                      ref={videoRef}
-                      className="w-full h-64 object-contain rounded"
-                      autoPlay
-                      playsInline
-                    />
-                    {results.camera && (
-                      <div className="absolute top-2 right-2">
-                        {renderStatus(results.camera.status)}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      disabled={busy}
-                      onClick={startCamera}
-                      className="px-3 py-2 rounded bg-verde-escuro text-white w-full sm:w-auto"
-                    >
-                      Ativar câmera
-                    </button>
-                    <button
-                      onClick={takeSnapshot}
-                      className="px-3 py-2 rounded border w-full sm:w-auto"
-                    >
-                      Tirar foto
-                    </button>
-                    <button
-                      onClick={stopCamera}
-                      className="px-3 py-2 rounded border w-full sm:w-auto"
-                    >
-                      Parar
-                    </button>
-                  </div>
-                </div>
-
-                <div className="md:w-1/2 mt-4 md:mt-0">
-                  <canvas
-                    ref={canvasRef}
-                    className="w-full h-64 bg-gray-100 rounded mb-2"
-                  />
-                  <div className="text-sm text-gray-700">
-                    <p>
-                      Resolução: {results.camera?.resolution?.width ?? "—"} x{" "}
-                      {results.camera?.resolution?.height ?? "—"}
-                    </p>
-                    <p>Dispositivo: {results.camera?.deviceLabel ?? "—"}</p>
-                    <p>
-                      Rostos detectados: {results.faces ?? "—"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-4 flex flex-wrap justify-between gap-2">
-                <button
-                  onClick={() => setStep("connectivity")}
-                  className="px-4 py-2 rounded border w-full sm:w-auto"
-                >
-                  Voltar
-                </button>
-                <button
-                  onClick={() => setStep("mic")}
-                  className="px-4 py-2 rounded bg-quase-branco border w-full sm:w-auto"
-                >
-                  Próximo: Microfone
-                </button>
-              </div>
+    <div className="flex flex-col md:flex-row md:gap-4">
+      <div className="md:w-1/2">
+        <div className="bg-black rounded mb-2 relative">
+          <video
+            ref={videoRef}
+            className="w-full h-64 object-contain rounded"
+            autoPlay
+            playsInline
+          />
+          {results.camera && (
+            <div className="absolute top-2 right-2">
+              {renderStatus(results.camera.status)}
             </div>
           )}
+        </div>
+
+        {/* Infos da câmera */}
+        <div className="text-sm text-gray-700 mb-2 space-y-1">
+          <p>
+            <span className="font-semibold">Resolução:</span>{" "}
+            {results.camera?.resolution?.width ?? "—"} x{" "}
+            {results.camera?.resolution?.height ?? "—"}
+          </p>
+          <p>
+            <span className="font-semibold">Dispositivo:</span>{" "}
+            {results.camera?.deviceLabel ?? "—"}
+          </p>
+          <p className="flex items-center gap-2">
+            <span className="font-semibold">Rostos detectados:</span>
+            {results.faces && results.faces > 0 ? (
+              <span className="px-2 py-1 rounded bg-green-100 text-green-700 text-xs font-medium">
+                {results.faces} rosto(s) encontrado(s)
+              </span>
+            ) : (
+              <span className="px-2 py-1 rounded bg-red-100 text-red-700 text-xs font-medium">
+                Nenhum rosto
+              </span>
+            )}
+          </p>
+        </div>
+
+        {/* Botões */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            disabled={busy}
+            onClick={startCamera}
+            className="px-3 py-2 rounded bg-verde-escuro text-white w-full sm:w-auto"
+          >
+            Ativar câmera
+          </button>
+          <button
+            onClick={stopCamera}
+            className="px-3 py-2 rounded border w-full sm:w-auto"
+          >
+            Parar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div className="mt-4 flex flex-wrap justify-between gap-2">
+      <button
+        onClick={() => setStep("connectivity")}
+        className="px-4 py-2 rounded border w-full sm:w-auto"
+      >
+        Voltar
+      </button>
+      <button
+        onClick={() => setStep("mic")}
+        className="px-4 py-2 rounded bg-quase-branco border w-full sm:w-auto"
+      >
+        Próximo: Microfone
+      </button>
+    </div>
+  </div>
+)}
+
+
 
           {/* --- MICROPHONE --- */}
           {step === "mic" && (
@@ -660,34 +643,86 @@ function drawLevel() {
           )}
 
           {/* --- DONE --- */}
-          {step === "done" && (
-            <div>
-              <h2 className="font-semibold mb-2">Resumo / Resultados</h2>
-              <div className="bg-white p-4 rounded shadow">
-                <pre className="text-sm max-h-64 overflow-auto">
-                  {JSON.stringify(results, null, 2)}
-                </pre>
+{step === "done" && (
+  <div>
+    <h2 className="font-semibold mb-2">Resumo / Resultados</h2>
+    <div className="bg-white p-4 rounded shadow space-y-3 text-sm leading-relaxed text-gray-800">
 
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <button
-                    onClick={downloadResults}
-                    className="px-3 py-2 rounded bg-verde-escuro text-white w-full sm:w-auto"
-                  >
-                    Baixar relatório (JSON)
-                  </button>
-                  <button
-                    onClick={() => {
-                      setStep("connectivity");
-                      setResults({ timestamp: new Date().toISOString() });
-                    }}
-                    className="px-3 py-2 rounded border w-full sm:w-auto"
-                  >
-                    Reiniciar testes
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+      {/* Conectividade */}
+      <div>
+        <h3 className="font-semibold text-roxo-escuro">Conectividade</h3>
+        {results.connectivity ? (
+          <p>
+            Latência de <b>{results.connectivity.pingMs} ms</b>, velocidade de
+            download <b>{results.connectivity.downloadKbps} kbps</b> (
+            {results.connectivity.downloadBytes} bytes).
+            Status:{" "}
+            {results.connectivity.status === "success"
+              ? "✅ Conexão estável"
+              : "❌ Problemas detectados"}
+          </p>
+        ) : (
+          <p>Não foi realizado.</p>
+        )}
+      </div>
+
+      {/* Câmera */}
+      <div>
+        <h3 className="font-semibold text-roxo-escuro">Câmera</h3>
+        {results.camera ? (
+          <p>
+            Dispositivo: <b>{results.camera.deviceLabel ?? "Não identificado"}</b>,
+            resolução <b>{results.camera.resolution?.width} x {results.camera.resolution?.height}</b>.
+            {results.faces && results.faces > 0 ? (
+              <> Foram detectados <b>{results.faces}</b> rosto(s). ✅</>
+            ) : (
+              <> Nenhum rosto detectado. ❌</>
+            )}
+          </p>
+        ) : (
+          <p>Não foi realizado.</p>
+        )}
+      </div>
+
+      {/* Microfone */}
+      <div>
+        <h3 className="font-semibold text-roxo-escuro">Microfone</h3>
+        {results.mic ? (
+          <p>
+            Dispositivo: <b>{results.mic.deviceLabel ?? "Não identificado"}</b>.{" "}
+            Última gravação com tamanho de <b>{results.mic.recordedBlobSize} bytes</b>.
+            Nível de áudio máximo detectado:{" "}
+            <b>{(results.mic.rms ?? 0).toFixed(3)}</b>.{" "}
+            {results.mic.status === "success"
+              ? "✅ Captação de áudio bem-sucedida."
+              : "❌ Não foi detectado áudio."}
+          </p>
+        ) : (
+          <p>Não foi realizado.</p>
+        )}
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-3">
+        <button
+          onClick={downloadResults}
+          className="px-3 py-2 rounded bg-verde-escuro text-white w-full sm:w-auto"
+        >
+          Baixar relatório (JSON)
+        </button>
+        <button
+          onClick={() => {
+            setStep("connectivity");
+            setResults({ timestamp: new Date().toISOString() });
+          }}
+          className="px-3 py-2 rounded border w-full sm:w-auto"
+        >
+          Reiniciar testes
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
         </div>
       </div>
     </div>
