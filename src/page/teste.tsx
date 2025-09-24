@@ -4,6 +4,7 @@ import { Header } from "../components/header";
 import { WatsonChat } from "../components/WatsonChat";
 import "../index.css";
 import * as faceapi from "face-api.js";
+import NetworkTest from '../components/networktest';
 
 type MicDevice = {
   deviceId: string;
@@ -63,59 +64,6 @@ export function Teste() {
   const rafRef = useRef<number | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-
-// --- CONNECTIVITY TEST ---
-async function runConnectivityTest() {
-  setBusy(true);
-  try {
-    const url = "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-
-    // Ping test (5 samples)
-    const samples: number[] = [];
-    for (let i = 0; i < 5; i++) {
-      const t0 = performance.now();
-      await fetch(url, { method: "HEAD", cache: "no-store" });
-      samples.push(performance.now() - t0);
-    }
-    const mean = Math.round(samples.reduce((a, b) => a + b, 0) / samples.length);
-    const jitter = Math.round(
-      samples.slice(1).reduce((acc, v, i) => acc + Math.abs(v - samples[i]), 0) /
-        (samples.length - 1)
-    );
-
-    // Download test (~1MB)
-    const dlStart = performance.now();
-    const dlResp = await fetch(url, { cache: "no-store" });
-    const dlBuffer = await dlResp.arrayBuffer();
-    const dlMs = (performance.now() - dlStart) / 1000;
-    const bytes = dlBuffer.byteLength;
-    const kbps = Math.round((bytes * 8) / dlMs / 1000);
-    const [micAudioUrl, setMicAudioUrl] = useState<string | null>(null);
-
-    const status: TestStatus = mean < 600 && kbps > 400 ? "success" : "failure";
-
-    setResults((prev) => ({
-      ...prev,
-      connectivity: {
-        pingMs: mean,
-        downloadKbps: kbps,
-        downloadBytes: bytes,
-        details: `jitter ${jitter} ms, ${samples.length} amostras, download em ${dlMs.toFixed(2)}s`,
-        status,
-      },
-    }));
-  } catch (err: any) {
-    setResults((prev) => ({
-      ...prev,
-      connectivity: {
-        details: `erro: ${err?.message || err}`,
-        status: "failure",
-      },
-    }));
-  } finally {
-    setBusy(false);
-  }
-}
 
 
   // --- CAMERA TEST ---
@@ -412,55 +360,21 @@ function drawLevel() {
             </div>
           </div>
 
-          {/* --- CONNECTIVITY --- */}
           {step === "connectivity" && (
             <div>
-              <h2 className="font-semibold mb-2">Teste de conectividade</h2>
-              <p className="text-sm mb-4">
-                Verificamos latência e velocidade de download (apenas para
-                demonstração).
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <button
-                  disabled={busy}
-                  onClick={runConnectivityTest}
-                  className="bg-verde-escuro text-white px-4 py-2 rounded w-full sm:w-auto"
-                >
-                  Iniciar teste
-                </button>
-                <button
-                  onClick={() => {
-                    setResults((prev) => ({ ...prev, connectivity: undefined }));
-                  }}
-                  className="px-3 py-2 rounded border w-full sm:w-auto"
-                >
-                  Resetar
-                </button>
-              </div>
-            {results.connectivity && (
-  <div className="mt-4 bg-bg-escurinho p-3 rounded flex flex-col sm:flex-row items-start sm:items-center gap-2">
-    {renderStatus(results.connectivity.status)}
-    <div>
-      <p>Ping médio: {results.connectivity.pingMs ?? "—"} ms</p>
-      <p>
-        Download: {results.connectivity.downloadKbps ?? "—"} kbps (
-        {results.connectivity.downloadBytes ?? "—"} bytes)
-      </p>
-      <p className="text-sm text-gray-600">
-        {results.connectivity.details}
-      </p>
-    </div>
-  </div>
-)}
-
-              <div className="mt-4 flex justify-end">
-                <button
-                  onClick={() => setStep("camera")}
-                  className="px-4 py-2 rounded bg-quase-branco border"
-                >
-                  Próximo: Câmera
-                </button>
-              </div>
+              <NetworkTest
+                onFinish={({ downloadMbps, uploadMbps, prepDuration, status }) => {
+                  setResults((prev) => ({
+                    ...prev,
+                    connectivity: {
+                      downloadKbps: downloadMbps ? Math.round(downloadMbps * 1000 / 8) : undefined,
+                      details: `Download: ${downloadMbps ?? '-'} Mbps, Upload: ${uploadMbps ?? '-'} Mbps, Prep: ${prepDuration?.toFixed(2) ?? '-'}s`,
+                      status: status ?? ((downloadMbps && downloadMbps >= 25 && uploadMbps && uploadMbps >= 3) ? "success" : "failure"),
+                    },
+                  }));
+                  setStep("camera");
+                }}
+              />
             </div>
           )}
 
