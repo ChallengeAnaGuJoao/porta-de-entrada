@@ -130,7 +130,7 @@ export default function NetworkTest({ onFinish }: { onFinish: (result: {
             )}
             {downloadMbps && uploadMbps && !networkError && (
               <div className="mt-4">
-                {parseFloat(downloadMbps) >= 5 && parseFloat(uploadMbps) >= 3 ? (
+                {parseFloat(downloadMbps) >= 1.5 && parseFloat(uploadMbps) >= 1.5 ? (
                   <span className="font-bold">Conexão boa para videoconferência.</span>
                 ) : (
                   <span className="text-red-500 font-bold">Conexão abaixo do ideal para videoconferência.</span>
