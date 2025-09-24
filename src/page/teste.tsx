@@ -266,6 +266,7 @@ async function runConnectivityTest() {
     recorder.onstop = () => {
       const blob = new Blob(recordedChunksRef.current, { type: "audio/webm" });
       const audioUrl = URL.createObjectURL(blob);
+      const micAudioUrl = results.mic?.audioUrl as string | undefined;
 
       const status: TestStatus = maxLevelRef.current >= 0.01 ? "success" : "failure";
 
@@ -638,10 +639,10 @@ function drawLevel() {
                   Ver resultados
                 </button>
               </div>
-              {results.mic?.audioUrl && (
+              {results.mic?.audioUrl as string&& (
   <div className="mt-3">
     <p className="text-sm font-medium">Reprodução da gravação:</p>
-    <audio controls src={results.mic.audioUrl} className="w-full mt-1" />
+    <audio controls src={results.mic.audioUrl as string} className="w-full mt-1" />
   </div>
 )}
 
