@@ -90,6 +90,7 @@ async function runConnectivityTest() {
     const dlMs = (performance.now() - dlStart) / 1000;
     const bytes = dlBuffer.byteLength;
     const kbps = Math.round((bytes * 8) / dlMs / 1000);
+    const [micAudioUrl, setMicAudioUrl] = useState<string | null>(null);
 
     const status: TestStatus = mean < 600 && kbps > 400 ? "success" : "failure";
 
@@ -265,8 +266,9 @@ async function runConnectivityTest() {
 
     recorder.onstop = () => {
       const blob = new Blob(recordedChunksRef.current, { type: "audio/webm" });
+      
       const audioUrl = URL.createObjectURL(blob);
-      const micAudioUrl = results.mic?.audioUrl as string | undefined;
+
 
       const status: TestStatus = maxLevelRef.current >= 0.01 ? "success" : "failure";
 
@@ -639,13 +641,7 @@ function drawLevel() {
                   Ver resultados
                 </button>
               </div>
-              {results.mic?.audioUrl as string&& (
-  <div className="mt-3">
-    <p className="text-sm font-medium">Reprodução da gravação:</p>
-    <audio controls src={results.mic.audioUrl as string} className="w-full mt-1" />
-  </div>
-)}
-
+             
             </div>
           )}
 
